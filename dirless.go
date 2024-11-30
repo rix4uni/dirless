@@ -32,6 +32,7 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Enable verbose output.")
 	noColor := flag.Bool("nc", false, "Disable colors in CLI output.")
 	matchFile := flag.String("match", "", "Path to custom match.json file.")
+	excludeRegex := flag.String("exclude-regex", "", "Comma-separated list of regex names to exclude.")
 	silent := flag.Bool("silent", false, "Silent mode.")
 	versionFlag := flag.Bool("version", false, "Print the version of the tool and exit.")
 	flag.Parse()
@@ -93,6 +94,15 @@ func main() {
 		return
 	}
 
+	// Parse the exclude-regex flag
+	excludeSet := make(map[string]bool)
+	if *excludeRegex != "" {
+		excludedNames := strings.Split(*excludeRegex, ",")
+		for _, name := range excludedNames {
+			excludeSet[strings.TrimSpace(name)] = true
+		}
+	}
+
 	// Read the input from stdin
 	inputBytes, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
@@ -109,6 +119,14 @@ func main() {
 
 	// Iterate over each regex config
 	for _, config := range regexConfigs {
+		// Skip excluded regex names
+		if excludeSet[config.Name] {
+			if *verbose {
+				fmt.Printf("[skipped] [%s]\n", config.Name)
+			}
+			continue
+		}
+
 		// Compile the regular expression
 		compiledRegex, err := regexp.Compile(config.Match)
 		if err != nil {
@@ -118,10 +136,15 @@ func main() {
 
 		// Iterate over each line in the input and apply the regex
 		for _, line := range lines {
+			// Trim control characters like \r and surrounding spaces
+			line = strings.TrimSpace(line)
+
+			// Skip empty lines
 			if line == "" {
 				continue
 			}
 
+			// Check if the line matches the regex
 			if compiledRegex.MatchString(line) {
 				// Highlight the matched portion in the line
 				var highlightedLine string
