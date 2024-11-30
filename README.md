@@ -25,6 +25,8 @@ cd dirless; go install
 ## Usage
 ```
 Usage of dirless:
+  -exclude-regex string
+        Comma-separated list of regex names to exclude.
   -match string
         Path to custom match.json file.
   -nc
